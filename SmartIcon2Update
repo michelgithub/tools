@@ -1,0 +1,94 @@
+Voici le code @Formula pour modifier n'importe quel champ d'un document depuis un SmartIcon.
+--------------------------------------------------------------------------------------------
+
+
+REM {Get a listing of all the fields on the current document}; 
+List := @DocFields; 
+
+REM {Possible data types to choose from.}; 
+
+REM {I called Number Integer because use keyboard to select what you want    with keyboard quicker.}; 
+
+DataTypes := "Text" : "Date" : "Integer" : "Password" : "Name" : "Common    Name" : "Remove Field" : "Text Multi Value" : "Date Multi Value" : "Integer    Multi Value" : "Name Multi Value" : "Common Name Multi Value"; 
+
+REM {Prompt for which field needs to be updated.}; 
+
+EditField := @Prompt( [OkCancelList] ; "Select a field to alter" ; "Select    the field you wish to alter:" ; "CustomerReply" ; List ) ; 
+
+REM {Prompt for which data type you would like the data to be}; 
+
+REM {This needs to be done before value prompt to determine if the Picklist    or any prompting needs to be used.}; 
+
+DataType := @Prompt( [OkCancelList] : [NoSort] ; "data type or action for    field: " + EditField ; "Please Select the correct data type or action for    field: " + EditField ; "Text" ; DataTypes ); 
+
+REM {Based on what type of data is being entered different prompts will    happen if any at all.}; 
+
+RawValue := @If( 
+
+@Contains( DataType ; "Name Multi Value" ); @PickList( [Name] ); 
+
+@Contains( DataType ; "Name" ) ; @PickList( [Name] : [Single] ); 
+
+DataType = "Remove Field" ; "" ; 
+
+@Contains( DataType ; "Multi Value" ); @Prompt( [OkCancelEdit] ; 
+
+"New Value for field: " + EditField ; "Please enter the new desired value    for: " + EditField + " seperated with : for each value." ; 
+
+@Abstract([TextOnly] ; 254 ; "" ; @Text( EditField ) ) ); 
+
+@Prompt( [OkCancelEdit] ; "New Value for field: " + EditField ; 
+
+"Please enter the new desired value for: " + EditField + "." ; 
+
+@Abstract([TextOnly] ; 254 ; "" ; @Text( EditField) ) ) ); 
+
+REM {If data conversion doesn't work then don't set field.}; 
+
+@If( 
+
+DataType = "Date" ; @If( @SetField( EditField ; @TextToTime( 
+
+RawValue ) ) ); 
+
+DataType = "Integer" ; @If( @IsError( @TextToNumber( RawValue ) ) ; 
+
+"" ; @SetField( EditField ; @TextToNumber( RawValue ) ) ) ; 
+
+DataType = "Common Name" ; @SetField( EditField ; @Name( [CN]; 
+
+RawValue ) ) ; 
+
+DataType = "Password" ; @SetField( EditField ; @Password( RawValue ) 
+
+) ; 
+
+DataType = "Remove Field" ; @SetField( EditField ; @DeleteField ) ; 
+
+DataType = "Text Multi Value" ; @SetField( EditField ; @Explode( 
+
+RawValue ; ":" ) ) ; 
+
+DataType = "Date Multi Value" ; @SetField( EditField ; @TextToTime( 
+
+@Explode( RawValue ; ":" ) ) ) ; 
+
+DataType = "Integer Multi Value" ; @If( @IsError( @TextToNumber( 
+
+@Explode( RawValue ; ":" ) ) ) ; "" ; @SetField( EditField ; @TextToNumber( 
+
+@Explode( RawValue ; ":" ) ) ) ) ; 
+
+DataType = "Name Multi Value" ; @SetField( EditField ; @Explode( 
+
+RawValue ; ":" ) ) ; 
+
+DataType = "Common Name Multi Value" ; @SetField( EditField ; @Name( 
+
+[CN]; @Explode( RawValue ; ":" ) ) ); 
+
+@SetField( EditField ; RawValue ) 
+
+); 
+
+""
