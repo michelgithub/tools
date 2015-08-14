@@ -1,2 +1,2 @@
 # tools
-some Lotus tools
+some Lotus tools to help the administration
