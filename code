@@ -1,0 +1,228 @@
+
+------------------------------------------------
+
+sort button  field parameter list
+
+valueS := @Sort( parameterList; [Ascending]:[CaseSensitive]);
+FIELD parameterList := valueS;
+@True
+
+------------------------------------------------
+
+form F_xProfile   alias   FxProfile
+
+
+Option Public
+Option Declare
+'   Use "OpenLogFunctions"
+Sub Initialize
+	Dim session As New NotesSession
+	Dim workspace As New NotesUIWorkspace
+	Dim uiprofile As notesUIDocument
+	
+	Dim valNameList As String
+	
+	Dim Result As Integer
+	
+	On Error Goto errHandler
+	
+	Set uiprofile = workspace.EditProfile("FxProfile")
+'	Call uiprofile.Save
+'	Call uiprofile.Close
+	
+	Goto exitprocess
+	
+errHandler:
+	
+		'Call LogEvent ("Event Text", "Warning", Nothing)
+	
+		'** do any other error logging things here...
+	If (Err > 0) Then
+			'** Messagebox will write to log.nsf, just like a backend agent will
+		MessageBox "Error event 'Set Profile' - line " + CStr ( Erl() ) + " : " + Error, 16, "Error on Select Template ..."
+'		Call logError
+	End If
+	
+exitprocess:
+	
+	Exit Sub
+	
+End Sub
+
+------------------------------------------------
+
+
+Multiple values   Text   Editable
+
+@Trim(@Unique(profileGroupList))
+
+Sort List
+	valueS := @Sort( parameterList; [Ascending]:[CaseSensitive]);
+	FIELD parameterList := valueS;
+	@True
+
+
+
+------------------------------------------------
+
+ServerPath   Text    Computed   
+@ThisValue
+
+Sub Click(Source As Button)
+	Dim session 				As New NotesSession
+	Dim ws					As New NotesUIWorkspace 
+	Dim thisDB 				As NotesDatabase
+	Dim TargetDb 				As NotesDatabase
+	Dim uidoc				As NotesUIDocument
+	Dim docCurrent				As NotesDocument
+'	Dim docTarget				As NotesDocument
+	Dim selectedDb				As Variant 
+	Dim nServerName				As NotesName
+	Dim strProfile				As String	
+	
+	On Error Goto ErrorHandler	
+	
+	Set thisDB = session.CurrentDatabase 
+	Set uidoc = ws.CurrentDocument
+	Set docCurrent = uidoc.Document 
+	strProfile = ""
+	
+	selectedDb = ws.Prompt(13, "Database selection", "Please select a Database to investigate")
+	If Isarray(selectedDb) Then
+		
+'         Set the info concerning the selected DB.	
+		
+		Call docCurrent.ReplaceItemValue("strServerPath", selectedDb(0))							' Save the Server Path for the Set Template Version
+		Call docCurrent.ReplaceItemValue("strFilePath", selectedDb(1))								' Save the File Path for the Set Template Version
+		
+		Set nServerName = session.CreateName(selectedDb(0))
+		Call docCurrent.ReplaceItemValue ("ServerPath", nServerName.Abbreviated)
+		Call docCurrent.ReplaceItemValue ("FilePath", selectedDb(1))
+		Call docCurrent.ReplaceItemValue ("FileTitle", selectedDb(2))	
+		
+		Set targetDB = session.GetDatabase ( selectedDb(0), selectedDb(1) )						'Open the  Target DB
+		
+		Call docCurrent.ReplaceItemValue ("InheritFrom", targetDB.DesignTemplateName)	
+		Call docCurrent.ReplaceItemValue ("IsMasterTemplate", targetDB.TemplateName)	
+		
+'         get the data from the DB.	
+		
+		If GetProfileList(targetDB, strProfile) Then
+			Call docCurrent.ReplaceItemValue("toDisplay", "Yes")
+		Else
+			Call docCurrent.ReplaceItemValue("toDisplay", "NO")
+		End If
+		
+'		Call docCurrent.ReplaceItemValue("DisplayResult", GetProfileList(targetDB))
+		Call docCurrent.ReplaceItemValue("DisplayResult", strProfile)
+		
+	End If
+	
+	Call uidoc.Refresh
+	
+	Goto exitprocess
+	
+ErrorHandler:
+	Messagebox "Error event 'Select Database' - line " + Cstr ( Erl() ) + " : " + Error, 16, "Error on Select Template ..."
+	
+exitprocess:
+	
+	Exit Sub
+	
+End Sub
+
+
+------------------------------------------------
+
+Flag definition
+toDisplay   Text   Ediatable	"NO"
+Hide ....   @True
+
+------------------------------------------------
+
+Display the profile
+
+%REM
+	Agent Display the Profile
+	Created Jun 29, 2011 by Michel Salamin/Partners/Givaudan
+	Description: Comments for Agent
+%END REM
+Option Public
+Option Declare
+Use "TestScript"
+%Include "lsconst.lss"
+Sub Initialize
+	
+	Dim session 						As New NotesSession
+	Dim ws								As New NotesUIWorkspace 
+	Dim thisDB 							As NotesDatabase
+	Dim TargetDb 						As NotesDatabase
+	Dim uidoc							As NotesUIDocument
+	Dim theDoc							As NotesDocument
+	Dim Flag							As Boolean
+	
+ 	Dim docCurrent						As NotesDocument
+	'	Dim docTarget						As NotesDocument
+	Dim selectedDb						As Variant 
+	Dim nServerName						As NotesName
+	Dim strProfile						As String	
+	
+	On Error GoTo ErrorHandler	
+	
+	Set thisDB = session.CurrentDatabase 
+'	Set uidoc = ws.CurrentDocument
+'	Set docCurrent = uidoc.Document 
+	strProfile = ""
+
+'	Call ws.ComposeDocument( "", "", "FGetProfile")
+	Set uidoc = ws.ComposeDocument( "", "", "FGetProfile")
+	Set docCurrent = uidoc.Document 
+	
+	selectedDb = ws.Prompt(13, "Database selection", "Please select a Database to investigate")
+	If IsArray(selectedDb) Then
+		
+		'         Set the info concerning the selected DB.	
+		
+		Call docCurrent.ReplaceItemValue("strServerPath", selectedDb(0))							' Save the Server Path for the Set Template Version
+		Call docCurrent.ReplaceItemValue("strFilePath", selectedDb(1))								' Save the File Path for the Set Template Version
+		
+		Set nServerName = session.CreateName(selectedDb(0))
+		Call docCurrent.ReplaceItemValue ("ServerPath", nServerName.Abbreviated)
+		Call docCurrent.ReplaceItemValue ("FilePath", selectedDb(1))
+		Call docCurrent.ReplaceItemValue ("FileTitle", selectedDb(2))	
+		
+		Set targetDB = session.GetDatabase ( selectedDb(0), selectedDb(1) )						'Open the  Target DB
+		
+		Call docCurrent.ReplaceItemValue ("InheritFrom", targetDB.DesignTemplateName)	
+		Call docCurrent.ReplaceItemValue ("IsMasterTemplate", targetDB.TemplateName)	
+		
+		'         get the data from the DB.	
+		
+ 		If GetProfileList(targetDB, strProfile) Then
+			Call docCurrent.ReplaceItemValue("toDisplay", "Yes")
+ 		Else
+			Call docCurrent.ReplaceItemValue("toDisplay", "NO")
+ 		End If
+		
+		'		Call docCurrent.ReplaceItemValue("DisplayResult", GetProfileList(targetDB))
+		Call docCurrent.ReplaceItemValue("DisplayResult", strProfile)
+							
+	End If
+	
+	Call uidoc.Refresh
+	
+	GoTo exitprocess
+	
+ErrorHandler:
+	MessageBox "Error event 'Select Database' - line " + CStr ( Erl() ) + " : " + Error, 16, "Error on Display the Profile ..."
+	
+exitprocess:
+	
+	Exit Sub
+	
+	
+	
+End Sub
+
+
+------------------------------------------------------------------------------------
